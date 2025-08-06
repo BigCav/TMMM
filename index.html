@@ -291,6 +291,9 @@
       { id: 890, name: "Headphones" }, { id: 1266, name: "Shampoo" }, { id: 1217, name: "Shaving Foam" },
     ].sort((a,b)=>a.name.localeCompare(b.name)); // Alphabetical!
     let ITEMS = [], marketRows = [];
+    let lastMarketListings = {}; // key: item.id, value: html string to show
+    let isFetching = false;
+
     // ---- SETTINGS ----
     function loadSettings() {
       const saved = localStorage.getItem("marketSettings");
@@ -303,6 +306,7 @@
     function saveSettings() {
       localStorage.setItem("marketSettings", JSON.stringify(ITEMS));
     }
+
     // ---- TAB SWITCH ----
     function switchTab(name) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -310,7 +314,7 @@
       if (name === 'market') {
         document.querySelector('.tab:nth-child(1)').classList.add('active');
         document.getElementById('market').style.display = 'block';
-        renderTableRows();
+        renderTableRows(); // Only show latest data or last skeleton
       } else if (name === 'prices') {
         document.querySelector('.tab:nth-child(2)').classList.add('active');
         document.getElementById('prices').style.display = 'block';
@@ -320,13 +324,9 @@
         document.getElementById('about').style.display = 'block';
       }
     }
+
     // ---- TABLES ----
-    function setSkeletonListings() {
-      marketRows.forEach(row => {
-        row.querySelector('.listings-cell').innerHTML = '<span class="skeleton-text"></span>';
-      });
-    }
-    function renderTableRows() {
+    function renderTableRows(showSkeleton = false) {
       const body = document.getElementById("market-body");
       const emptyMsg = document.getElementById("market-empty");
       const table = document.getElementById("market-table");
@@ -342,42 +342,53 @@
       body.innerHTML = ITEMS.map(item => `
         <tr>
           <td>${item.name}</td>
-          <td class="listings-cell"><span class="skeleton-text"></span></td>
+          <td class="listings-cell">${
+            showSkeleton
+              ? '<span class="skeleton-text"></span>'
+              : (lastMarketListings[item.id] ?? '<span class="skeleton-text"></span>')
+          }</td>
           <td><a href="https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${item.id}&itemName=${encodeURIComponent(item.name)}&itemType=Other" class="price-link" target="_blank">Open</a></td>
         </tr>
       `).join('');
       marketRows = Array.from(body.querySelectorAll('tr'));
     }
+
+    // ---- DATA FETCH ----
     async function fetchData() {
       if (!ITEMS.length) return;
+      isFetching = true;
+      renderTableRows(true); // Show skeletons only during fetch!
       try {
         const res = await fetch(WORKER_URL);
         const { data } = await res.json();
+        lastMarketListings = {};
         ITEMS.forEach((item, i) => {
-          const cell = marketRows[i]?.querySelector('.listings-cell');
-          if (!cell) return;
           const itemData = data?.[item.id]?.itemmarket;
-          if (!itemData || !Array.isArray(itemData.listings)) {
-            cell.innerHTML = '<span style="color:#7ec3fc">No matches</span>';
-            return;
+          let html = '<span style="color:#7ec3fc">No matches</span>';
+          if (itemData && Array.isArray(itemData.listings)) {
+            const filtered = itemData.listings.filter(
+              l => l.price <= item.maxPrice && l.amount >= item.minAmount
+            );
+            if (filtered.length) {
+              html = filtered.map((l) =>
+                `💰 $${l.price.toLocaleString()} × ${l.amount}x`
+              ).join("<br>");
+            }
           }
-          const filtered = itemData.listings.filter(
-            l => l.price <= item.maxPrice && l.amount >= item.minAmount
-          );
-          let listingsHTML = '<span style="color:#7ec3fc">No matches</span>';
-          if (filtered.length) {
-            listingsHTML = filtered.map((l) =>
-              `💰 $${l.price.toLocaleString()} × ${l.amount}x`
-            ).join("<br>");
-          }
-          cell.innerHTML = listingsHTML;
+          lastMarketListings[item.id] = html;
         });
+        renderTableRows(false); // Show real data
       } catch (e) {
-        marketRows.forEach(row => {
-          row.querySelector('.listings-cell').innerHTML = '<span style="color:#fc7979">Error</span>';
+        // On error, keep last shown, just update error cells
+        ITEMS.forEach((item, i) => {
+          lastMarketListings[item.id] = '<span style="color:#fc7979">Error</span>';
         });
+        renderTableRows(false);
+      } finally {
+        isFetching = false;
       }
     }
+
     // ---- PRICE MONITOR ----
     function renderPriceMonitor() {
       renderAddBar();
@@ -406,7 +417,7 @@
           const val = +e.target.value;
           ITEMS[idx][type] = isNaN(val) || val < 1 ? 1 : val;
           saveSettings();
-          renderTableRows(); setSkeletonListings(); fetchData();
+          renderTableRows(false); // Render with current data, don't trigger skeleton or fetch
         });
       });
     }
@@ -416,7 +427,7 @@
         i => !ITEMS.some(j => j.id === i.id)
       );
       bar.innerHTML = '';
-      if (!untracked.length) return; // <--- Show nothing if all tracked!
+      if (!untracked.length) return;
       const select = document.createElement('select');
       select.className = "add-select";
       select.innerHTML =
@@ -447,8 +458,9 @@
             minAmount: +stock.value
           });
           saveSettings();
-          renderTableRows(); renderPriceMonitor();
-          setSkeletonListings(); fetchData();
+          renderTableRows(false);
+          renderPriceMonitor();
+          fetchData();
         }
       });
       bar.appendChild(select);
@@ -459,11 +471,12 @@
     window.removeItem = function(id) {
       ITEMS = ITEMS.filter(i => i.id !== id);
       saveSettings();
-      renderTableRows(); renderPriceMonitor();
-      setSkeletonListings(); fetchData();
+      renderTableRows(false);
+      renderPriceMonitor();
+      fetchData();
     };
+
     // ---- COUNTDOWN ----
-    let prevCountdown = null;
     function updateCountdown() {
       const now = Date.now();
       const sec = 15 - (Math.floor(now / 1000) % 15);
@@ -471,9 +484,9 @@
       if (countdown) {
         countdown.textContent =
           `Refreshing in ${sec === 1 ? '1 second' : (sec === 15 ? '0 seconds' : sec + ' seconds')}`;
-        prevCountdown = sec;
       }
     }
+
     // ---- AUTO-REFRESH ----
     function syncRefresh(callback, interval = 15000) {
       const now = Date.now();
@@ -484,8 +497,7 @@
       }, nextBoundary);
     }
     function runRefreshCycle(callback, interval) {
-      setSkeletonListings();
-      setTimeout(callback, 400);
+      callback();
     }
     function goToCreate() {
       switchTab('prices');
@@ -494,14 +506,13 @@
         if (add) add.focus();
       }, 80);
     }
+
     // ---- INIT ----
     ITEMS = loadSettings();
-    renderTableRows();
-    setSkeletonListings();
+    renderTableRows(false);
     fetchData();
     setInterval(updateCountdown, 300);
     syncRefresh(() => fetchData(), 15000);
   </script>
 </body>
 </html>
- 
