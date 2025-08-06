@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Torn Misc Market Monitor</title>
+  <style>
+    body {
+      background: #111a22;
+      color: #eaf2fa;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 960px;
+    }
+    .header {
+      background: #161c25;
+      padding: 1.2rem 2rem;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 2px 16px #000c;
+    }
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      letter-spacing: .02em;
+      color: #e3f0ff;
+    }
+    .countdown {
+      font-size: 1.18rem;
+      font-weight: 700;
+      margin-right: 0.4rem;
+      background: #22334c;
+      color: #21afff;
+      border-radius: 50%;
+      width: 2.3em;
+      height: 2.3em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px #21afff99, 0 0 0 3px #161c25 inset;
+      border: 2.5px solid #294066;
+      transition: background 0.3s, color 0.3s;
+      animation: timerpop .3s cubic-bezier(.9,0,.1,1) 1;
+      user-select: none;
+    }
+    @keyframes timerpop {
+      0% { transform: scale(0.88);}
+      50% { transform: scale(1.09);}
+      100% { transform: scale(1);}
+    }
+    .tabs {
+      display: flex;
+      gap: 1.2rem;
+      margin-top: 0.6rem;
+      border-bottom: 2px solid #232a38;
+      font-size: 1rem;
+      margin-left: 0.3rem;
+      margin-bottom: 1.5rem;
+    }
+    .tab {
+      padding: 0.6rem 0 0.3rem 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #98b9d9;
+      transition: color .13s, border-color .16s;
+      margin-bottom: -2px;
+    }
+    .tab.active {
+      color: #fff;
+      border-bottom: 3px solid #21afff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #181f29;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-top: 1rem;
+      margin-bottom: 0;
+      box-shadow: 0 1px 8px #0007;
+    }
+    th, td {
+      text-align: left;
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid #243142;
+    }
+    th {
+      background: #22334c;
+      font-size: 1.08rem;
+      color: #b8e4ff;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .price-link, .profile-link {
+      color: #21afff;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .price-link:hover, .profile-link:hover {
+      color: #53b9ff;
+      text-decoration: underline;
+    }
+    .skeleton-text {
+      display: inline-block;
+      height: 1rem;
+      background: linear-gradient(90deg, #243142 25%, #294066 55%, #243142 85%);
+      border-radius: 6px;
+      width: 70%;
+      animation: pulse 1.2s infinite ease-in-out;
+      vertical-align: middle;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+    .editable-input {
+      background: #233049;
+      border: 1px solid #394e6d;
+      border-radius: 5px;
+      color: #e3f5ff;
+      padding: 0.25rem 0.5rem;
+      width: 80px;
+      font-size: 1rem;
+      text-align: right;
+      margin-right: 0.25rem;
+      transition: border-color 0.14s;
+    }
+    .editable-input:focus {
+      outline: 2px solid #21afff;
+      border-color: #53b9ff;
+      background: #232f45;
+    }
+    .about-container {
+      background: #181f29;
+      border-radius: 13px;
+      padding: 2.2rem 2rem 1.5rem 2rem;
+      margin-top: 1.7rem;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 2px 20px #0002;
+      line-height: 1.7;
+      max-width: 100%;
+      color: #cbeafe;
+    }
+    .about-container h2 {
+      color: #21afff;
+      font-size: 1.2rem;
+      margin-top: 0;
+      margin-bottom: 0.3rem;
+    }
+    .about-container p {
+      margin: 0.8rem 0;
+    }
+    @media (max-width: 700px) {
+      th, td { padding: 0.5rem; font-size: 0.96rem; }
+      .header { padding: 0.5rem 1rem; }
+      .container { padding: 0; }
+      .about-container { padding: 1rem 0.6rem 1.2rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-title">🧠 Torn Misc Market Monitor</div>
+      <div style="display:flex;align-items:center;">
+        <div class="countdown" id="countdown">10</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('market')">Market Listings</div>
+      <div class="tab" onclick="switchTab('prices')">Price Monitor</div>
+      <div class="tab" onclick="switchTab('about')">About</div>
+    </div>
+
+    <div id="market" class="tab-content">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Listings</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="market-body">
+          <!-- Rows injected here -->
+        </tbody>
+      </table>
+    </div>
+
+    <div id="prices" class="tab-content" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Price Threshold</th>
+            <th>Min Stock</th>
+          </tr>
+        </thead>
+        <tbody id="price-body">
+          <!-- Price rules injected -->
+        </tbody>
+      </table>
+    </div>
+
+    <div id="about" class="tab-content" style="display:none;">
+      <div class="about-container">
+        <h2>About Torn Misc Market Monitor</h2>
+        <p>
+          <b>Torn Misc Market Monitor</b> is a modern real-time market scanning tool for <a href="https://www.torn.com" class="price-link" target="_blank">Torn</a>, designed to help you snipe bargains on high-value miscellaneous items, whether for profit or personal use.
+        </p>
+        <p>
+          &bull; Powered by the official <b>Torn V2 API</b> (via Cloudflare Worker backend), the monitor checks market listings every 10 seconds, always displaying the latest results.<br>
+          &bull; <b>Custom price and stock alerts</b> let you instantly spot the best deals, with your rules saved privately in your browser (localStorage).<br>
+          &bull; Listings are refreshed with minimal animation for clarity and speed.
+        </p>
+        <p>
+          This tool is free to use and open for feedback or feature requests.<br>
+          <b>Questions or need help?</b> Contact the creator in-game:
+          <a class="profile-link" href="https://www.torn.com/profiles.php?XID=3858298" target="_blank">View my Torn profile &rarr;</a>
+        </p>
+        <p style="opacity:0.8; margin-top:1.5rem;">
+          Not affiliated with Torn. All item data &copy; Torn.com.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Your Cloudflare Worker endpoint:
+    const WORKER_URL = 'https://tmmm.cavauk1.workers.dev/'; // CHANGE THIS!
+
+    const DEFAULTS = [
+        { id: 889, name: "Travel Mug", maxPrice: 1100, minAmount: 3 },
+        { id: 897, name: "Bottle Cap", maxPrice: 1090, minAmount: 10 },
+        { id: 1087, name: "Tampon", maxPrice: 2100, minAmount: 10 },
+        { id: 1092, name: "Lubricant", maxPrice: 2900, minAmount: 3 },
+        { id: 280, name: "Elephant Statue", maxPrice: 2900, minAmount: 3 },
+        { id: 1216, name: "Clippers", maxPrice: 2400, minAmount: 5 },
+        { id: 54, name: "Diamond Ring", maxPrice: 2900, minAmount: 4 },
+        { id: 905, name: "Car Keys", maxPrice: 1300, minAmount: 5 },
+        { id: 1220, name: "Massage Oil", maxPrice: 2300, minAmount: 6 },
+    ];
+
+    let ITEMS = [];
+    let marketRows = [];
+
+    function loadSettings() {
+        const saved = localStorage.getItem("marketSettings");
+        if (saved) {
+        try {
+            const arr = JSON.parse(saved);
+            return DEFAULTS.map((def, i) => ({
+            ...def,
+            maxPrice: arr[i]?.maxPrice ?? def.maxPrice,
+            minAmount: arr[i]?.minAmount ?? def.minAmount,
+            }));
+        } catch { return [...DEFAULTS]; }
+        }
+        return [...DEFAULTS];
+    }
+
+    function saveSettings() {
+        localStorage.setItem("marketSettings", JSON.stringify(ITEMS.map(i => ({
+        maxPrice: i.maxPrice,
+        minAmount: i.minAmount,
+        }))));
+    }
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        if (name === 'market') {
+        document.querySelector('.tab:nth-child(1)').classList.add('active');
+        document.getElementById('market').style.display = 'block';
+        } else if (name === 'prices') {
+        document.querySelector('.tab:nth-child(2)').classList.add('active');
+        document.getElementById('prices').style.display = 'block';
+        } else if (name === 'about') {
+        document.querySelector('.tab:nth-child(3)').classList.add('active');
+        document.getElementById('about').style.display = 'block';
+        }
+    }
+
+    function setSkeletonListings() {
+        marketRows.forEach(row => {
+        row.querySelector('.listings-cell').innerHTML = '<span class="skeleton-text"></span>';
+        });
+    }
+
+    function renderTableRows() {
+        const body = document.getElementById("market-body");
+        marketRows = [];
+        body.innerHTML = ITEMS.map(item => `
+        <tr>
+            <td>${item.name}</td>
+            <td class="listings-cell"><span class="skeleton-text"></span></td>
+            <td><a href="https://www.torn.com/page.php?sid=ItemMarket#/market/view=search&itemID=${item.id}&itemName=${encodeURIComponent(item.name)}&itemType=Other" class="price-link" target="_blank">Open</a></td>
+        </tr>
+        `).join('');
+        marketRows = Array.from(body.querySelectorAll('tr'));
+    }
+
+    async function fetchData() {
+        try {
+        const res = await fetch(WORKER_URL);
+        const { data } = await res.json();
+        ITEMS.forEach((item, i) => {
+            const cell = marketRows[i]?.querySelector('.listings-cell');
+            if (!cell) return;
+            const itemData = data?.[item.id]?.itemmarket;
+            if (!itemData || !Array.isArray(itemData.listings)) {
+            cell.innerHTML = '<span style="color:#7ec3fc">No matches</span>';
+            return;
+            }
+            const filtered = itemData.listings.filter(
+            l => l.price <= item.maxPrice && l.amount >= item.minAmount
+            );
+            let listingsHTML = '<span style="color:#7ec3fc">No matches</span>';
+            if (filtered.length) {
+            listingsHTML = filtered.map((l, idx) =>
+                `#${idx + 1}: 💰 $${l.price.toLocaleString()} × ${l.amount}x`
+            ).join("<br>");
+            }
+            cell.innerHTML = listingsHTML;
+        });
+        } catch (e) {
+        marketRows.forEach(row => {
+            row.querySelector('.listings-cell').innerHTML = '<span style="color:#fc7979">Error</span>';
+        });
+        }
+    }
+
+    // Modern blue pop-out countdown
+    let prevCountdown = null;
+    function updateCountdown() {
+      // Wall clock: sync for everyone, every 15 seconds (0, 15, 30, 45)
+      const now = Date.now();
+      const sec = 15 - (Math.floor(now / 1000) % 15);
+      const countdown = document.getElementById("countdown");
+      if (countdown) {
+        countdown.textContent = sec === 15 ? 0 : sec;
+        if (prevCountdown !== null && prevCountdown !== sec) {
+          countdown.style.animation = 'none';
+          // force reflow to re-trigger animation
+          void countdown.offsetWidth;
+          countdown.style.animation = '';
+        }
+        prevCountdown = sec;
+      }
+    }
+
+    // Wall-clock aligned refresh for everyone, every 15s
+    function syncRefresh(callback, interval = 15000) {
+        const now = Date.now();
+        const nextBoundary = interval - (now % interval);
+        setTimeout(() => {
+        runRefreshCycle(callback, interval);
+        setInterval(() => runRefreshCycle(callback, interval), interval);
+        }, nextBoundary);
+    }
+
+    // Always run skeletons first, then fetch data after a short delay
+    function runRefreshCycle(callback, interval) {
+        setSkeletonListings();
+        // Staggered: show skeletons for a split second, then fetch
+        setTimeout(callback, 400);
+    }
+
+    function renderPriceMonitor() {
+        const tbody = document.getElementById("price-body");
+        tbody.innerHTML = "";
+        ITEMS.forEach((item, idx) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${item.name}</td>
+            <td>
+            <input type="number" min="1" class="editable-input" value="${item.maxPrice}" 
+                data-type="maxPrice" data-idx="${idx}" />
+            </td>
+            <td>
+            <input type="number" min="1" class="editable-input" value="${item.minAmount}" 
+                data-type="minAmount" data-idx="${idx}" />
+            </td>
+        `;
+        tbody.appendChild(row);
+        });
+        tbody.querySelectorAll('.editable-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const idx = +e.target.getAttribute('data-idx');
+            const type = e.target.getAttribute('data-type');
+            const val = +e.target.value;
+            ITEMS[idx][type] = isNaN(val) || val < 1 ? 1 : val;
+            saveSettings();
+            renderTableRows();
+            setSkeletonListings();
+            fetchData();
+        });
+        });
+    }
+
+    // Init
+    ITEMS = loadSettings();
+    renderTableRows();
+    renderPriceMonitor();
+    setSkeletonListings();
+    fetchData();
+
+    setInterval(updateCountdown, 220);
+
+    // Wall-clock aligned 15s refresh for everyone, always skeletons first
+    syncRefresh(() => fetchData(), 15000);
+
+  </script>
+</body>
+</html>
